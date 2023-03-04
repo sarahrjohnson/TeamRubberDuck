@@ -1,0 +1,89 @@
+---
+title: "Bootstrap Omunibus Test for Project G"
+author: "Linda Wei"
+output: html_notebook
+---
+
+Conduct a bootstrap for omnibus inference without needing conditions
+- Construct Tukey pairwise confidence intervals (if appropriate)
+
+
+
+
+```{r echo=FALSE, message=FALSE}
+# load the data
+library(here)
+school_data <- read.csv(here("data", "hsb2.csv"))
+
+# check the data 
+print(fivenum(school_data$write))
+
+# use the bootstrap function with 3 factor samples to find the five number summary and CI
+
+  ses1 <- subset(school_data, ses == 1)$write
+  ses2 <- subset(school_data, ses == 2)$write
+  ses3 <- subset(school_data, ses == 3)$write
+  
+  # bootstrap function
+  mean_vector <- NULL
+  n1 <- length(ses1)
+  n2 <- length(ses2)
+  n3 <- length(ses3)
+  
+  for (i in 1:10000) {
+    the_sample1 <- sample(ses1, n1, replace = TRUE)
+    mean_sample1 <- mean(the_sample1)
+    the_sample2 <- sample(ses2, n2, replace = TRUE)
+    mean_sample2 <- mean(the_sample2)
+    the_sample3 <- sample(ses3, n3, replace = TRUE)
+    mean_sample3 <- mean(the_sample3)
+    the_sample <- c(the_sample1, the_sample2, the_sample3)
+    mean_vector <- c(mean_vector, mean(the_sample))
+  }
+  
+  mean_vector <- sort(mean_vector)
+  boot_int <- c(mean_vector[251], mean_vector[9750])
+  
+  # print the confidence interval from the bootstrap result
+  print(boot_int)
+  print(fivenum(mean_vector))
+
+```
+
+Based on the bootstrap result, we are 95% confident that the true population parameter on writing test score lies between `r boot_int[1]` and `r boot_int[2]`. The null hypothesis is there is no mean difference among the SES groups on writing test scores. The confidence interval does not contain a specific value (such as zero), we can conclude that the probability of observing a value as extreme as or more extreme than that value under the null hypothesis is less than the level of significance (e.g., 0.05). This provides evidence against the null hypothesis and suggests that the observed difference in means (or other population parameter) is statistically significant.
+
+```{r}
+# another way to make bootstrap inference based on F statistics
+# compute the observed means and the omnibus F-statistic
+obs_means <- tapply(school_data$write, school_data$ses, mean)
+ss_between <- sum((obs_means - mean(school_data$write))^2)
+df_between <- 2
+ss_within <- sum((school_data$write - obs_means[school_data$ses])^2)
+df_within <- 197
+F_statistic <- (ss_between / df_between) / (ss_within / df_within)
+
+# compute the bootstrap means and F- statistic
+boot_F_stats <- numeric(10000)
+for(i in 1:10000) { 
+
+boot_means <- tapply(the_sample, school_data$ses, mean)
+boot_ss_between <- sum((boot_means - mean(the_sample))^2)
+boot_ss_within <- sum((the_sample - boot_means[school_data$ses])^2)
+df_between <- length(unique(school_data$ses)) - 1
+df_within <- length(the_sample) - length(unique(school_data$ses))
+boot_F_stats[i] <- (boot_ss_between / df_between) / (boot_ss_within / df_within)
+}  
+print(boot_F_stats)
+
+# Calculate the p-value
+
+p_value <- sum(mean(boot_F_stats) >= F_statistic) / length(boot_F_stats)
+print(p_value)
+
+
+```
+
+Based on the above bootstrap test on F statistic and p-value, the p-value is less than .05 which indicated that at 95% confidence level there are mean differences among different SES groups on the writing test scores. 
+
+
+
