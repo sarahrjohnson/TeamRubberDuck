@@ -1,0 +1,95 @@
+---
+title: "Project G: Collaborating on Projects"
+output: html_notebook
+---
+
+*This project will require you to collaborate with some of your fellow students to complete a statistical analysis and report. Here are some of the tasks that you must accomplish.*
+
+- Create a public GitHub repository with an RStudio project file (team leader)
+- Put a description of the project in the README.md file (team leader)
+- Email team members and Mike the repository address (team leader)
+- Write a short introduction - Paige
+- Provide a graphical display and descriptive statistics to compare groups - Paige
+- Conduct an analysis of variance (ANOVA) for omnibus inference - Hannah
+- Check the conditions necessary for valid ANOVA inference - Hannah
+- Conduct a bootstrap for omnibus inference without needing conditions - Linda
+- Construct Tukey pairwise confidence intervals (if appropriate) - Linda
+- Write a conclusions section - Paige
+- Assemble a complete knittable report (team leader)
+
+*If you write any functions, put these in a **Functions** folder. Put data in a **Data** folder. These should be subfolders in your main project folder. Your finished notebook should be neat and organized. Save this notebook with your team name and **Project G** in the file name, rather than the report title. Leave the instructions in place and begin your report after the last horizontal line below. All team members will receive the same score for this project. (40 points possible)*
+
+***
+
+The *HSB2 Data* includes variables collected on a random sample of high school seniors. Conduct an analysis to compare performance on the test variable assigned to your team for the three socioeconomic groups. Include a graphical display and descriptive statistics. Also include an omnibus analysis that assumes valid conditions for parametric inference (ANOVA) as well as an omnibus analysis that does not assume these conditions (bootstrap). Construct pairwise Tukey confidence intervals, if appropriate.
+
+***
+
+## Introduction
+
+This report will study the relationship of SES category to writing scores on the standardized tests of high school seniors. The data for this study is from a randomly selected national sample of 200 high school seniors. To begin to study the relationship in question, the research team first look at the composition of SES levels (low, medium, and high) present in the sample. Then, we can compare writing test scores for the given SES bands. 
+
+*Source of data: The "High School and Beyond" survey conducted on high school*
+*seniors in 1980 by the National Center of Education Statistics.*
+
+## Results
+
+Below in Figure 1, we see a breakdown of the proportions of the different SES groups in the sample - composed of 23.5% low SES, 47.5% medium, and 29% high.
+
+```{r include=FALSE}
+
+library(here)
+
+hsb2 <- read.csv(here("Data", "hsb2.csv"))
+
+hsb2$ses <- factor(hsb2$ses,
+                        labels = c("Low", "Medium", "High"))
+
+```
+
+*Figure 1. Bar plot of porportions of SES representation in the HSB2 study*
+```{r echo=FALSE}
+
+ses.counts <- table(hsb2$ses)
+
+ses.props <- prop.table(ses.counts)
+
+barplot(ses.props,
+        xlab = "SES Level",
+        ylab = "Proportion", ylim = c(0, 1))
+```
+
+In Figure 2, we can start to see the differences in standardized test writing scores based on SES group.
+
+*Figure 2. side-by-side boxplots of writing scores by SES level*
+
+```{r echo=FALSE}
+
+boxplot(hsb2$write ~ hsb2$ses,
+        ylim = c(20, 80),
+        xlab = "SES Level",
+        ylab = "Writing Scores")
+```
+
+Finally, based on the above boxplots, Table 1 below breaks down the key statistics associated with each SES level and their scores on the writing test.
+
+*Table 1. Descriptive statistics for writing scores by SES level.*
+```{r include=FALSE}
+
+
+Mean <- tapply(hsb2$write, hsb2$ses, mean)
+SD <- tapply(hsb2$write, hsb2$ses, sd)
+Min <- tapply(hsb2$write, hsb2$ses, min)
+Q1 <- tapply(hsb2$write, hsb2$ses, quantile, p = 0.25)
+Med <-  tapply(hsb2$write, hsb2$ses, median)
+Q3 <- tapply(hsb2$write, hsb2$ses, quantile, p = 0.75)
+Max <- tapply(hsb2$write, hsb2$ses, max)
+
+round(cbind(Mean, SD, Min, Q1, Med, Q3, Max))
+
+```
+
+## Conclusion
+
+
+
