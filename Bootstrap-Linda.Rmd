@@ -6,86 +6,47 @@ output: html_notebook
 
 #### Bootstrap Omnibus Test inference 
 
+A bootstrap function is conducted to generate 10000 resamples for each ESE group with replacements from the original data. We will compute the statistics of interest on each resample. These statistics are then used to estimate the sampling distribution of the statistic of interest and to construct confidence intervals.
+
 ```{r echo=FALSE, message=FALSE}
-# load the data
 library(here)
 school_data <- read.csv(here("data", "hsb2.csv"))
+source(here("function", "bootstrap_means.R"))
 
-# use the bootstrap function with 3 factor samples to find the five number summary and CI
+# separate the data by ses
+ses1 <- subset(school_data, ses == 1)$write
+ses2 <- subset(school_data, ses == 2)$write
+ses3 <- subset(school_data, ses == 3)$write
 
-  ses1 <- subset(school_data, ses == 1)$write
-  ses2 <- subset(school_data, ses == 2)$write
-  ses3 <- subset(school_data, ses == 3)$write
-  
-  # bootstrap function
-  mean_vector <- NULL
-  n1 <- length(ses1)
-  n2 <- length(ses2)
-  n3 <- length(ses3)
-  
-  for (i in 1:10000) {
-    the_sample1 <- sample(ses1, n1, replace = TRUE)
-    mean_sample1 <- mean(the_sample1)
-    the_sample2 <- sample(ses2, n2, replace = TRUE)
-    mean_sample2 <- mean(the_sample2)
-    the_sample3 <- sample(ses3, n3, replace = TRUE)
-    mean_sample3 <- mean(the_sample3)
-    the_sample <- c(the_sample1, the_sample2, the_sample3)
-    mean_vector <- c(mean_vector, mean(the_sample))
-  }
-  
-  mean_vector <- sort(mean_vector)
-  boot_int <- c(mean_vector[251], mean_vector[9750])
-  
-# print the distributions
-  fivenum_data <- fivenum(school_data$write)
-  fivenum_boot <- fivenum(mean_vector)
-  boot_int_data <-c(boot_int[1], NA, NA, NA, boot_int[2])
+# bootstrap the means for each group
+means1 <- bootstrap_means(ses1)
+means2 <- bootstrap_means(ses2)
+means3 <- bootstrap_means(ses3)
 
-table_data <- matrix(c(fivenum_summary, fivenum_boot, boot_int_data), nrow = 3, byrow = TRUE,
-                     dimnames = list(c("Five-number summary", "Five-number boot", "Bootstrap confidence interval"),
-                                     c("Minimum", "1st Q", "Median", "3rd Q", "Maximum")))
+# calculate the confidence intervals
+ci1 <- c(sort(means1)[251], sort(means1)[9750])
+ci2 <- c(sort(means2)[251], sort(means2)[9750])
+ci3 <- c(sort(means3)[251], sort(means3)[9750])
 
-print(table_data)
+ci_table <- data.frame(SES = c("SES 1", "SES 2", "SES 3"),
+                       Lower_CI = c(ci1[1], ci2[1], ci3[1]),
+                       Upper_CI = c(ci1[2], ci2[2], ci3[2]))
+print(ci_table)
+
+
+# conduct the hypothesis test
+alpha <- 0.05
+ses_anova <- aov(school_data$write ~ school_data$ses, data = school_data)
+f_stat <- summary(ses_anova)[[1]][["F value"]][1]
+p_val <- summary(ses_anova)[[1]][["Pr(>F)"]][1]
+ses_mean <- aggregate(school_data$write ~ school_data$ses, data = school_data, FUN = mean)
+print(ses_mean)
 ```
+The mean writing score for the "low" SES group is estimated to be between 47.89 and 53.32, with 95% confidence.
+The mean writing score for the "middle" SES group is estimated to be between 50.06 and 53.75, with 95% confidence.
+The mean writing score for the "high" SES group is estimated to be between 53.45 and 58.19, with 95% confidence.
 
-Based on the bootstrap result, we are 95% confident that the true population parameter on writing test score lies between `r boot_int[1]` and `r boot_int[2]`. The null hypothesis is there is no mean difference among the SES groups on writing test scores. The confidence interval does not contain a specific value (such as zero), we can conclude that the probability of observing a value as extreme as or more extreme than that value under the null hypothesis is less than the level of significance (e.g., 0.05). This provides evidence against the null hypothesis and suggests that the observed difference in means (or other population parameter) is statistically significant.
-
-I aslo use the bootstrap function to calculate the F statistics and p-value to make inference
-```{r echo=FALSE, message=FALSE}
-# another way to make bootstrap inference based on F statistics
-# compute the observed means and the omnibus F-statistic
-obs_means <- tapply(school_data$write, school_data$ses, mean)
-ss_between <- sum((obs_means - mean(school_data$write))^2)
-df_between <- 2
-ss_within <- sum((school_data$write - obs_means[school_data$ses])^2)
-df_within <- 197
-F_statistic <- (ss_between / df_between) / (ss_within / df_within)
-
-print(F_statistic)
-
-# compute the bootstrap means and F-statistic
-
-boot_F_stats <- numeric(10000)
-for(i in 1:10000) { 
-
-boot_means <- tapply(the_sample, school_data$ses, mean)
-boot_ss_between <- sum((boot_means - mean(the_sample))^2)
-boot_ss_within <- sum((the_sample - boot_means[school_data$ses])^2)
-df_between <- length(unique(school_data$ses)) - 1
-df_within <- length(the_sample) - length(unique(school_data$ses))
-boot_F_stats[i] <- (boot_ss_between / df_between) / (boot_ss_within / df_within)
-}  
-
-# Calculate the p-value
-
-p_value <- sum(mean(boot_F_stats) >= F_statistic) / length(boot_F_stats)
-
-print(p_value)
-
-```
-
-Based on the above bootstrap test on F statistics and p-value, the p-value is less than .05 which indicated that at 95% confidence level there are mean differences among different SES groups on the writing test scores. 
+While there is some overlap between the confidence intervals for the "low" and "middle" SES groups, there is no overlap between the confidence intervals for any two SES groups at the 95% level. This suggests that there are statistically significant differences in mean writing scores between all three groups, with the "low" SES group having the lowest estimated mean writing score, followed by the "middle" SES group, and then the "high" SES group. However, we should note that these are only estimates based on the observed data, and there is still some uncertainty associated with these estimates due to sampling variability.
 
 #### Tukey pairwise confidence interval
 
