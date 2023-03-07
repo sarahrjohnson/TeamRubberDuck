@@ -1,0 +1,89 @@
+---
+title: "Project G: Collaborating on Projects"
+output: html_notebook
+---
+
+*This project will require you to collaborate with some of your fellow students to complete a statistical analysis and report. Here are some of the tasks that you must accomplish.*
+
+- Create a public GitHub repository with an RStudio project file (team leader)
+- Put a description of the project in the README.md file (team leader)
+- Email team members and Mike the repository address (team leader)
+- Write a short introduction
+- Provide a graphical display and descriptive statistics to compare groups
+- Conduct an analysis of variance (ANOVA) for omnibus inference
+- Check the conditions necessary for valid ANOVA inference
+- Conduct a bootstrap for omnibus inference without needing conditions
+- Construct Tukey pairwise confidence intervals (if appropriate)
+- Write a conclusions section
+- Assemble a complete knittable report (team leader)
+
+*If you write any functions, put these in a **Functions** folder. Put data in a **Data** folder. These should be subfolders in your main project folder. Your finished notebook should be neat and organized. Save this notebook with your team name and **Project G** in the file name, rather than the report title. Leave the instructions in place and begin your report after the last horizontal line below. All team members will receive the same score for this project. (40 points possible)*
+
+***
+
+The *HSB2 Data* includes variables collected on a random sample of high school seniors. Conduct an analysis to compare performance on the test variable assigned to your team for the three socioeconomic groups. Include a graphical display and descriptive statistics. Also include an omnibus analysis that assumes valid conditions for parametric inference (ANOVA) as well as an omnibus analysis that does not assume these conditions (bootstrap). Construct pairwise Tukey confidence intervals, if appropriate.
+
+***
+```{r include=FALSE}
+library(here)
+HSB2 <- read.csv(here("Data2","hsb2.csv"))
+```
+
+### Conduct an analysis of variance (ANOVA) for omnibus inference
+
+```{r echo=FALSE}
+HSB2$ses <- factor(HSB2$ses, levels = c(1, 2, 3), labels = c("low", "middle", "high"))
+anova <- aov(write ~ ses, data = HSB2)
+summary(anova)
+```
+
+The F-value in the ANOVA output is 4.97, the larger F-value indicates a greater difference between the mean write scores of the three groups compared to the variability within each group. The p-value is 0.0078, means that there is strong evidence against the null hypothesis of no difference in the means, and we can reject the null hypothesis in favor of the alternative hypothesis that at least one of the three groups has a different mean write score. So there is evidence of a significant difference in the mean write scores between the three levels of the SES variable.
+
+```{r eval=FALSE, include=FALSE}
+library(heplots)
+# Compute effect size
+etasq(anova)
+```
+
+```{r echo=FALSE}
+# Fit one-way ANOVA model
+fit <- anova
+# Compute partial eta-squared manually
+ss_ses <- sum((tapply(HSB2$write, HSB2$ses, mean) - mean(HSB2$write))^2 * table(HSB2$ses))
+ss_error <- sum(resid(fit)^2)
+partial_eta_squared <- ss_ses / (ss_ses + ss_error)
+
+```
+Let's calculate the effect size. A partial eta-squared value of```r round(partial_eta_squared,3)``` indicates that the SES variable accounts for 4.8% of the variance in the write scores after controlling for other variables in the model, even after controlling for the effects of other variables in the model.Therefore, the effect of SES on write can be considered as small.
+
+
+### Check the conditions necessary for valid ANOVA inference
+
+It's important to check the assumptions of independence, normality and homogeneity of variance before interpreting the ANOVA results. If the assumptions are not met, alternative statistical tests or adjustments may be necessary.
+
+We already can tell the observations in each group are independent of each other, so it met the assumption of independence. 
+Now let's check the Homogeneity of variance. We will use Bartlett Test to check the homogeneity.
+
+```{r echo=FALSE}
+# Check assumptions of homogeneity of variance
+bartlett.test(write ~ ses, data = HSB2)
+```
+The Bartlett test of homogeneity of variance has a K-squared value of 0.146 and a high p-value 0.930, it suggests that the assumption of equal variances across the three levels of SES is met. This means that the variability of write scores is similar across the three levels of SES.
+
+Next, we will use the Shapiro-Wilk test checks whether the residuals from the ANOVA model are normally distributed
+
+```{r echo=FALSE}
+# Check assumptions of Normality of variance
+shapiro.test(resid(anova))
+```
+The Shapiro-Wilk test of normality has a W-value of 0.956 and a very small p-value 7.954e-06, it suggests that the assumption of normality may not be met. This means that the distribution of write scores may not be perfectly symmetrical and may have outliers or skewness.
+
+Let's conduct a histogram to visualize it. 
+
+```{r echo=FALSE}
+# Assume "resid_anova" is a vector containing the residuals from the ANOVA model
+hist(resid(anova), breaks = 20, main = "Histogram of Residuals", xlab = "Residuals Value")
+```
+It is clear that the distribution is not perfectly symmetrical.
+Therefore, it may be necessary to consider alternative statistical tests or adjustments. 
+
