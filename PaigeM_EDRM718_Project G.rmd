@@ -91,5 +91,5 @@ round(cbind(Mean, SD, Min, Q1, Med, Q3, Max))
 
 ## Conclusion
 
-
+Based on the descriptive and inferential statistical analysis conducted in this report, we can say that there is a relationship between standardized test scores (in this case, writing scores) and SES levels of students, with average scores rising with higher SES bands. Furthermore, we can say that this difference can be extrapolated to the population with 95% confidence. 
 
