@@ -1,5 +1,5 @@
 ---
-title: "Bootstrap Omnibus Test for Project G"
+title: "Project G Bootstrap Omnibus Test for Project G"
 author: "Linda Wei"
 output: html_notebook
 ---
@@ -42,7 +42,6 @@ p_val <- summary(ses_anova)[[1]][["Pr(>F)"]][1]
 ses_mean <- aggregate(school_data$write ~ school_data$ses, data = school_data, FUN = mean)
 print(ses_mean)
 
-plot()
 ```
 The mean writing score for the ses1 group is estimated to be between 47.89 and 53.32, with 95% confidence.
 The mean writing score for the ses2 group is estimated to be between 50.06 and 53.75, with 95% confidence.
@@ -64,12 +63,21 @@ write_data$ses <- factor(write_data$ses,
 
 # ANOVA
 model <- aov(write_data$write ~ write_data$ses, data = write_data)
+```
+Table 1 ANOVA test summary
+```{r echo=FALSE, message=FALSE}
 print(summary.aov(model))
+```
+Graph 1 Plot of the Tukey test result based on the given data
 
+```{r echo=FALSE, message=FALSE}
 # TukeyHSD
 tukey_data <- TukeyHSD(model)
 plot(tukey_data)
+```
 
+Table 2 Tukey test result based on the given data
+```{r echo=FALSE, message=FALSE}
 print(tukey_data)
 ```
 The ANOVA table shows that there is a statistically significant difference in the mean writing scores of the groups defined by the variable ses (which stands for socioeconomic status) at the alpha level of 0.05. The F-value is 4.97 and the p-value is 0.00784.
@@ -99,8 +107,14 @@ df <- data.frame(ses = c(rep("low", length(the_sample1)), rep("medium", length(t
 
 # ANOVA
 model2 <- aov(df$score ~ df$ses, data = df)
-print(summary(model2))
+```
 
+Table 3 ANOVA test summary based on the bootstrap data
+```{r echo=FALSE, message=FALSE}
+print(summary(model2))
+```
+Table 4 Tukey test result based on the bootstrap data
+```{r echo=FALSE, message=FALSE}
 # Tukey
 tukey_data2 <- TukeyHSD(model2)
 print(tukey_data2)
@@ -110,6 +124,5 @@ In this test, we made ses1 = "low", ses2 = "medium", ses3 = "high". The ANOVA ta
 The Tukey multiple comparisons of means table shows the pairwise comparisons between the three groups (SES levels low, medium, and high). Based on the table, we can conclude that there is a statistically significant difference between the mean scores of students with SES levels low and high (p adj = 0.0000512), but not between students with SES levels medium and high (p adj = 0.1061249), there is a statistically significant difference between medium and low (p adj = 0.0100626).
 
 Both Tukey pairwise comparision tests concluded statistically significant difference between the writing mean scores of students with ses level1 and level3. 
-
 
 
