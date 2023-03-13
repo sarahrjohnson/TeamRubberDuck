@@ -1,5 +1,5 @@
 
-# function to bootstrap the means
+# function to bootstrap the means for porject G
   bootstrap_means <- function(data, num_resam = 10000) {
   n <- length(data)
   means <- rep(0, num_resam)
@@ -9,3 +9,5 @@
   }
   return(means)
 }
+
+  
