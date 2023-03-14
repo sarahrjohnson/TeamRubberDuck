@@ -146,6 +146,7 @@ The Shapiro-Wilk test of normality has a W-value of 0.956 and a very small p-val
 A histogram was used to visualize the distribution. 
 
 *Figure 3. histogram of the residuals from the ANOVA model*
+
 ```{r echo=FALSE}
 # Assume "resid_anova" is a vector containing the residuals from the ANOVA model
 hist(resid(anova), breaks = 20, main = " ", xlab = "Residuals Value")
@@ -156,7 +157,7 @@ It is clear that the distribution is not perfectly symmetrical.
 Therefore, it may be necessary to consider alternative statistical tests or adjustments. 
 
 
-## Bootstrap Omnibus Test inference 
+## Bootstrap Inference of Individual Means
 
 A bootstrap function is conducted to generate 10000 resamples for each SES group with replacements from the original data. The statistics of interest on each resample was computed and used to estimate the sampling distribution of the statistic and construct confidence intervals.
 
@@ -218,6 +219,7 @@ print(summary.aov(model))
 ```
 
 *Figure 4. Plot of the Tukey test result*
+
 ```{r echo=FALSE, message=FALSE}
 # TukeyHSD
 tukey_data <- TukeyHSD(model)
