@@ -1,0 +1,92 @@
+---
+title: "Project G: Collaborating on Projects"
+author: "Sarah Johnson, Paige McKeown, Hannah Wang, Linda Wei"
+date: "March 14, 2023"
+output: html_notebook
+---
+
+## Bootstrap Omnibus Test inference 
+
+We will use bootstrap method to generate 10,000 resamples for each of the three SES groups with replacements from the original data. The objective is to estimate the resampling distribution of the difference between the maximum and minimum means among the three groups. Each resample is randomly drawn with replacement, with sizes n1, n2, and n3 for SES 1, SES 2, and SES 3 respectively. For each resample, the biggest and smallest means will be determined. The difference between the biggest and smallest means will be caculated. From the 10,000 calculated differences between the biggest and smallest means, a confidence interval will be constructed.
+
+
+```{r echo=FALSE, message=FALSE}
+library(here)
+library(ggplot2)
+school_data <- read.csv(here("data", "hsb2.csv"))
+
+# separate the data by ses
+ses1 <- subset(school_data, ses == 1)$write
+ses2 <- subset(school_data, ses == 2)$write
+ses3 <- subset(school_data, ses == 3)$write
+
+n1 <- length(ses1)
+n2 <- length(ses2)
+n3 <- length(ses3)
+
+num_bootstraps <- 10000
+
+bootstrap_diffs <- numeric(num_bootstraps)
+
+for (i in 1:num_bootstraps) {
+    the_sample1 <- sample(ses1, n1, replace = TRUE)
+    the_sample2 <- sample(ses2, n2, replace = TRUE)
+    the_sample3 <- sample(ses3, n3, replace = TRUE)
+    #the_sample <- c(the_sample1, the_sample2, the_sample3)
+  
+# Compute means of resampled data
+  mean1 <- mean(the_sample1)
+  mean2 <- mean(the_sample2)
+  mean3 <- mean(the_sample3)
+  
+# Compute differences in means
+  diffs <- c(mean1, mean2, mean3)
+  max_mean <- max(diffs)
+  min_mean <- min(diffs)
+  bootstrap_diffs[i] <- max_mean - min_mean
+  
+}
+ci_diff <- c(sort(bootstrap_diffs)[251], sort(bootstrap_diffs)[9750])
+
+```
+
+According to the bootstrap result and the confidence interval we can be 95% confident that the true difference between the maximum and minimum means of the three SES groups falls between `r round(ci_diff[1], 2)` and `r round(ci_diff[2], 2)`. This suggests that there is a statistically significant difference in the mean writing scores between the SES groups, with the highest SES group having the highest mean score and the lowest SES group having the lowest mean score.
+
+## Tukey pairwise confidence interval
+
+Based on the bootstrap test result, the 95% confidence interval of the difference between the maximum and minimum means of the three SES groups does not contain zero, which indicates that there is a statistically significant difference between the means of the three SES groups. However, it does not provide information on which specific pairs of means differ significantly from each other.Therefore, a post-hoc test Tukey pairwise comparison (Tukey HSD test) is conducted to determine which specific pairs of means differ significantly from each other, while controlling for the overall type I error rate.
+
+```{r echo=FALSE, message=FALSE}
+
+# prepare data for ANOVA
+write_data <- school_data[, c(4, 8)]
+
+write_data$ses <- factor(write_data$ses,
+                          levels = c(1, 2, 3))
+
+
+# ANOVA
+SES <- write_data$ses
+model <- aov(write_data$write ~ SES, data = write_data)
+```
+
+*Figure 4. Plot of the Tukey test result*
+
+
+```{r echo=FALSE, message=FALSE}
+
+# TukeyHSD
+tukey_data <- TukeyHSD(model)
+plot(tukey_data)
+
+```
+
+As Table 2 above shows that there is a statistically significant difference in the mean writing scores of the groups defined by the variable SES (which stands for socioeconomic status) at the alpha level of 0.05. The F-value is 4.97 and the p-value is 0.00784.
+
+ *Table 3. Tukey test result.*
+ 
+```{r echo=FALSE, message=FALSE}
+print(tukey_data)
+```
+
+The Tukey multiple comparisons of means table shows the results of pairwise comparisons between the three groups (SES levels 1, 2, and 3). Based on the table, we can conclude that there is a statistically significant difference between the mean writing scores of students with SES levels 1 and 3 (p adj = 0.011) and between students with SES levels 2 and 3 (p adj = 0.029). However, there is not a significant difference between the mean writing scores of students with SES levels 1 and 2 (p adj = 0.710).
