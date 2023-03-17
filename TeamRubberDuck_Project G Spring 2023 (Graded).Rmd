@@ -1,0 +1,290 @@
+---
+title: 'Project G: Collaborating on Projects'
+author: "Team Rubber Duck: Sarah Johnson, Paige McKeown, Hannah Wang, Linda Wei"
+date: "March 14, 2023"
+output:
+  html_document:
+    df_print: paged
+---
+
+*This project will require you to collaborate with some of your fellow students to complete a statistical analysis and report. Here are some of the tasks that you must accomplish.*
+
+- Create a public GitHub repository with an RStudio project file (team leader)
+- Put a description of the project in the README.md file (team leader)
+- Email team members and Mike the repository address (team leader)
+- Write a short introduction
+- Provide a graphical display and descriptive statistics to compare groups
+- Conduct an analysis of variance (ANOVA) for omnibus inference
+- Check the conditions necessary for valid ANOVA inference
+- Conduct a bootstrap for omnibus inference without needing conditions
+- Construct Tukey pairwise confidence intervals (if appropriate)
+- Write a conclusions section
+- Assemble a complete knittable report (team leader)
+
+*If you write any functions, put these in a **Functions** folder. Put data in a **Data** folder. These should be subfolders in your main project folder. Your finished notebook should be neat and organized. Save this notebook with your team name and **Project G** in the file name, rather than the report title. Leave the instructions in place and begin your report after the last horizontal line below. All team members will receive the same score for this project. (40 points possible)*
+
+***
+
+The *HSB2 Data* includes variables collected on a random sample of high school seniors. Conduct an analysis to compare performance on the test variable assigned to your team for the three socioeconomic groups. Include a graphical display and descriptive statistics. Also include an omnibus analysis that assumes valid conditions for parametric inference (ANOVA) as well as an omnibus analysis that does not assume these conditions (bootstrap). Construct pairwise Tukey confidence intervals, if appropriate.
+
+***
+## Introduction
+
+This report will study the relationship of SES category to writing scores on the standardized tests of high school seniors. The data for this study is from a randomly selected national sample of 200 high school seniors. To begin to study the relationship in question, the research team first look at the composition of SES levels (low, medium, and high) present in the sample. Then, we can compare writing test scores for the given SES bands. 
+
+*Source of data: The "High School and Beyond" survey conducted on high school*
+*seniors in 1980 by the National Center of Education Statistics.*
+
+## Descriptive Statistics
+
+Below in Figure 1, we see a breakdown of the proportions of the different SES groups in the sample - composed of 23.5% low SES, 47.5% medium, and 29% high.
+
+```{r include=FALSE}
+rm(list = ls())
+library(here)
+library(heplots)
+library(ggplot2)
+source(here("StudentFunctions", "bootstrap_means.R"))
+
+hsb2 <- read.csv(here("Data", "hsb2.csv"))
+
+hsb2$ses <- factor(hsb2$ses,
+                        labels = c("Low", "Medium", "High"))
+
+```
+
+*Figure 1. Bar plot of porportions of SES representation in the HSB2 study*
+```{r echo=FALSE}
+
+ses.counts <- table(hsb2$ses)
+
+ses.props <- prop.table(ses.counts)
+
+barplot(ses.props,
+        xlab = "SES Level",
+        ylab = "Proportion", ylim = c(0, 1))
+```
+
+In Figure 2, we can start to see the differences in standardized test writing scores based on SES group.
+
+*Figure 2. side-by-side boxplots of writing scores by SES level*
+
+```{r echo=FALSE}
+
+boxplot(hsb2$write ~ hsb2$ses,
+        ylim = c(20, 80),
+        xlab = "SES Level",
+        ylab = "Writing Scores")
+```
+
+Finally, based on the above boxplots, Table 1 below breaks down the key statistics associated with each SES level and their scores on the writing test.
+
+*Table 1. Descriptive statistics for writing scores by SES level.*
+```{r echo=FALSE}
+
+
+Mean <- tapply(hsb2$write, hsb2$ses, mean)
+SD <- tapply(hsb2$write, hsb2$ses, sd)
+Min <- tapply(hsb2$write, hsb2$ses, min)
+Q1 <- tapply(hsb2$write, hsb2$ses, quantile, p = 0.25)
+Med <-  tapply(hsb2$write, hsb2$ses, median)
+Q3 <- tapply(hsb2$write, hsb2$ses, quantile, p = 0.75)
+Max <- tapply(hsb2$write, hsb2$ses, max)
+
+round(cbind(Mean, SD, Min, Q1, Med, Q3, Max))
+
+```
+## Conduct an analysis of variance (ANOVA) for omnibus inference
+
+*Table 2. ANOVA Test Summary.*
+```{r echo=FALSE}
+#hsb2$ses2 <- factor(hsb2$ses2, levels = c(1, 2, 3), labels = c("low", "middle", "high"))
+anova <- aov(write ~ ses, data = hsb2)
+summary(anova)
+```
+
+The F-value in the ANOVA output is 4.97, the larger F-value indicates a greater difference between the mean write scores of the three groups compared to the variability within each group. The p-value of 0.0078, means that there is strong evidence to reject the null hypothesis which states there is no difference in the means, and accept the alternative hypothesis that at least one of the three groups has a different mean writing score. So there is evidence of a significant difference in the mean writing scores between the three levels of the SES variable.
+
+```{r include=FALSE}
+# Compute effect size
+etasq(anova)
+```
+
+```{r echo=FALSE}
+# Fit one-way ANOVA model
+fit <- anova
+# Compute partial eta-squared manually
+ss_ses <- sum((tapply(hsb2$write, hsb2$ses, mean) - mean(hsb2$write))^2 * table(hsb2$ses))
+ss_error <- sum(resid(fit)^2)
+partial_eta_squared <- ss_ses / (ss_ses + ss_error)
+
+```
+
+Next the effect size was calculated. A partial eta-squared value of```r round(partial_eta_squared,3)``` indicating that the SES variable accounts for 4.8% of the variance in the writing scores after controlling for other variables in the model, even after controlling for the effects of other variables in the model.Therefore, the effect of SES on writing would be considered small.
+
+
+## Check the conditions necessary for valid ANOVA inference
+
+It's important to check the assumptions of independence, normality and homogeneity of variance before interpreting the ANOVA results. If the assumptions are not met, alternative statistical tests or adjustments may be necessary.
+
+We already can tell the observations in each group are independent of each other, so this met the assumption of independence. 
+The Bartlett Test will then be used to check the Homogeneity of variance.
+
+```{r include=FALSE}
+# Check assumptions of homogeneity of variance
+bartlett.test(write ~ ses, data = hsb2)
+```
+The Bartlett test of homogeneity of variance has a K-squared value of 0.146 and a high p-value 0.930, which suggests that the assumption of equal variances across the three levels of SES is met. This means that the variability of writing scores is similar across the three levels of SES.
+
+Next, the Shapiro-Wilk test checks whether the residuals from the ANOVA model are normally distributed.
+
+```{r include=FALSE}
+# Check assumptions of Normality of variance
+shapiro.test(resid(anova))
+```
+The Shapiro-Wilk test of normality has a W-value of 0.956 and a very small p-value 7.954e-06, which suggests that the assumption of normality may not be met. This means that the distribution of writing scores may not be perfectly symmetrical and may have outliers or be skewed.
+
+A histogram was used to visualize the distribution. 
+
+*Figure 3. histogram of the residuals from the ANOVA model*
+
+```{r echo=FALSE}
+# Assume "resid_anova" is a vector containing the residuals from the ANOVA model
+hist(resid(anova), breaks = 20, main = " ", xlab = "Residuals Value")
+```
+
+
+It is clear that the distribution is not perfectly symmetrical.
+Therefore, it may be necessary to consider alternative statistical tests or adjustments. 
+
+
+## Bootstrap Inference of Individual Means
+
+A bootstrap function is conducted to generate 10000 resamples for each SES group with replacements from the original data. The statistics of interest on each resample was computed and used to estimate the sampling distribution of the statistic and construct confidence intervals.
+
+```{r include=FALSE}
+# separate the data by ses
+ses1 <- subset(hsb2, ses == "Low")$write
+ses2 <- subset(hsb2, ses == "Medium")$write
+ses3 <- subset(hsb2, ses == "High")$write
+
+# bootstrap the means for each group
+means1 <- bootstrap_means(ses1)
+means2 <- bootstrap_means(ses2)
+means3 <- bootstrap_means(ses3)
+
+# calculate the confidence intervals
+ci1 <- c(sort(means1)[251], sort(means1)[9750])
+ci2 <- c(sort(means2)[251], sort(means2)[9750])
+ci3 <- c(sort(means3)[251], sort(means3)[9750])
+
+ci_table <- data.frame(SES = c("SES 1", "SES 2", "SES 3"),
+                       Lower_CI = c(ci1[1], ci2[1], ci3[1]),
+                       Upper_CI = c(ci1[2], ci2[2], ci3[2]))
+print(ci_table)
+
+
+# conduct the hypothesis test
+alpha <- 0.05
+ses_anova <- aov(hsb2$write ~ hsb2$ses, data = hsb2)
+f_stat <- summary(ses_anova)[[1]][["F value"]][1]
+p_val <- summary(ses_anova)[[1]][["Pr(>F)"]][1]
+ses_mean <- aggregate(hsb2$write ~ hsb2$ses, data = hsb2, FUN = mean)
+print(ses_mean)
+
+```
+The mean writing score for the SES Low group is estimated to be between `r round(ci_table[[2]][[1]], 2)` and `r round(ci_table[[3]][[1]], 2)`, with 95% confidence.
+The mean writing score for the SES Medium group is estimated to be between `r round(ci_table[[2]][[2]], 2)` and `r round(ci_table[[3]][[2]], 2)`, with 95% confidence.
+The mean writing score for the SES High group is estimated to be between  `r round(ci_table[[2]][[3]], 2)` and `r round(ci_table[[3]][[3]], 2)`, with 95% confidence.
+
+While there is some overlap between the confidence intervals for the SES Low and SES Medium groups, there is no overlap between the confidence intervals for SES1 and SES3 groups at the 95% level. This suggests that there are statistically significant differences in mean writing scores between all three groups, with the SES1 group having the lowest estimated mean writing score, followed by the SES2 group, and then the SES3 group. However, we should note that these are only estimates based on the observed data, and there is still some uncertainty associated with these estimates due to sampling variability.
+
+## Bootstrap Confidence Interval 
+We will use bootstrap method to generate 10,000 resamples with replacements from the original data. The objective is to estimate the resampling distribution of the difference between the maximum and minimum means among the three groups. Each resample is randomly drawn with replacement, with sizes n1, n2, and n3 for SES Low, SES Medium, and SES High respectively. For each resample, the biggest and smallest means will be determined. The difference between the biggest and smallest means will be calculated for each resample. From the 10,000 stored differences between the biggest and smallest means, a confidence interval will be constructed.
+
+```{r include=FALSE}
+# separate the data by ses
+ses1 <- subset(hsb2, ses == "Low")$write
+ses2 <- subset(hsb2, ses == "Medium")$write
+ses3 <- subset(hsb2, ses == "High")$write
+
+n1 <- length(ses1)
+n2 <- length(ses2)
+n3 <- length(ses3)
+
+num_bootstraps <- 10000
+
+bootstrap_diffs <- numeric(num_bootstraps)
+
+for (i in 1:num_bootstraps) {
+    the_sample1 <- sample(ses1, n1, replace = TRUE)
+    the_sample2 <- sample(ses2, n2, replace = TRUE)
+    the_sample3 <- sample(ses3, n3, replace = TRUE)
+    #the_sample <- c(the_sample1, the_sample2, the_sample3)
+  
+# Compute means of resampled data
+  mean1 <- mean(the_sample1)
+  mean2 <- mean(the_sample2)
+  mean3 <- mean(the_sample3)
+  
+# Compute differences in means
+  diffs <- c(mean1, mean2, mean3)
+  max_mean <- max(diffs)
+  min_mean <- min(diffs)
+  bootstrap_diffs[i] <- max_mean - min_mean
+  
+}
+ci_diff <- c(sort(bootstrap_diffs)[251], sort(bootstrap_diffs)[9750])
+
+```
+
+In our sample, the difference in the maximum mean and the minimum mean of the SES groups was 6. Based on the bootstrap test result, we can be 95% confident that the true difference between the maximum and minimum means of the three SES groups falls between `r round(ci_diff[1], 2)` and `r round(ci_diff[2], 2)`. This suggests that there is a statistically significant difference in the mean writing scores between the SES groups. 
+
+## Tukey Test
+
+Based on the bootstrap test result, the 95% confidence interval of the difference between the maximum and minimum means of the three SES groups does not contain zero, which indicates that there is a statistically significant difference between the means of the three SES groups. However, it does not provide information on which specific pairs of means differ significantly from each other. Therefore, a post-hoc test Tukey pairwise comparison (Tukey HSD test) is conducted to determine which specific pairs of means differ significantly from each other, while controlling for the overall Type I error rate.
+
+```{r echo=FALSE, message=FALSE}
+
+# prepare data for ANOVA
+write_data <- hsb2[, c(4, 8)]
+
+write_data$ses <- factor(write_data$ses,
+                         labels = c("Low", "Medium", "High"))
+
+
+# ANOVA
+SES <- write_data$ses
+model <- aov(write_data$write ~ SES, data = write_data)
+```
+
+*Figure 4. Plot of the Tukey test result*
+
+
+```{r echo=FALSE, message=FALSE}
+
+# TukeyHSD
+tukey_data <- TukeyHSD(model)
+plot(tukey_data)
+
+```
+
+As Table 2 above shows that there is a statistically significant difference in the mean writing scores of the groups defined by the variable SES (which stands for socioeconomic status) at the alpha level of 0.05. The F-value is 4.97 and the p-value is 0.00784.
+
+ *Table 3. Tukey test result.*
+ 
+```{r echo=FALSE, message=FALSE}
+print(tukey_data)
+```
+
+The Tukey multiple comparisons of means table shows the results of pairwise comparisons between the three groups (SES levels Low, Medium, and High). Based on the table, we can conclude that there is a statistically significant difference between the mean writing scores of students with SES levels Low and High (p adj = 0.011) and between students with SES levels Medium and High (p adj = 0.029). However, there is not a significant difference between the mean writing scores of students with SES levels Low and Medium (p adj = 0.710).
+
+## Conclusion
+
+Based on the descriptive and inferential statistical analysis conducted in this report, we can say that there is a relationship between standardized test scores (in this case, writing scores) and SES levels of students, with average scores rising with higher SES bands. Furthermore, we can say that this difference can be extrapolated to the population with 95% confidence. 
+
+***
+
+**Very nice work, Team Rubber Duck! You addressed my concerns with your changes and the final product shows it!**
+
+**40/40**
